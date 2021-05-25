@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+  test:
+    image: gradle:jdk11
+    volumes:
+      - ${MY_WORKSPACE}:/ws
+    working_dir: /ws${WORKSPACE_PATH:-/}
+    user: ${MY_USER:-root}
+    depends_on:
+      - postgres
+      - mongodb
+      - activemq
+      - redis
+    command: >
+      ./gradlew --no-daemon
+      -g ./.gradle-cache
+      -Dspring.datasource.url=jdbc:postgresql://postgres:5432/global_offer
+      -Dspring.data.mongodb.uri=mongodb://dev-user:secret@mongodb:27017/global_offer
+      -Dredis.host=redis
+      --info --stacktrace
+      test jacocoTestReport
+
+  postgres:
+    image: "postgres:10.7-alpine"
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Passw0rd
+      - POSTGRES_DB=modulo
+
+  mongodb:
+    image: 'bitnami/mongodb:latest'
+    environment:
+      - MONGODB_DATABASE=global_offer
+      - MONGODB_USERNAME=dev-user
+      - MONGODB_PASSWORD=secret
+
+  activemq:
+    image: webcenter/activemq:latest
+    environment:
+      ACTIVEMQ_NAME: amq
+      ACTIVEMQ_REMOVE_DEFAULT_ACCOUNT: 'True'
+      ACTIVEMQ_ADMIN_LOGIN: admin
+      ACTIVEMQ_ADMIN_PASSWORD: admin
+
+  redis:
+    image: redis
+    command: ["redis-server", "--appendonly", "yes"]
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: 'rabbitmq'
+    ports:
+      - 5672:5672
+      - 15672:15672
